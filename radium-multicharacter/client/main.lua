@@ -1,11 +1,28 @@
--- radium-multicharacter/client/main.lua
-
+print("[Radium-Multicharacter] Client script loaded!")
 local cam = nil
 local peds = {}
 
+-- NUI unblocker
+CreateThread(function()
+    while true do
+        Wait(500)
+        if not IsNuiFocused() then
+            SetNuiFocus(false, false)
+        end
+    end
+end)
+
+
+
 RegisterNetEvent('radium-multicharacter:openUI', function(characters)
+    print("[Radium-Multicharacter] Received UI open event!")
+    print("[Radium-Multicharacter] Characters:", json.encode(characters))
+
     DoScreenFadeOut(0)
     SetEntityVisible(PlayerPedId(), false)
+
+    -- Spawn preview peds
+    spawnPreviewPeds(characters)
 
     -- Camera Setup
     cam = CreateCam("DEFAULT_SCRIPTED_CAMERA", true)
@@ -18,13 +35,14 @@ RegisterNetEvent('radium-multicharacter:openUI', function(characters)
     ShutdownLoadingScreenNui()
     DoScreenFadeIn(1000)
 
-    -- Send characters to UI
+    -- Open UI
     SetNuiFocus(true, true)
     SendNUIMessage({
         action = "openUI",
         characters = characters
     })
 end)
+
 
 RegisterNUICallback("createCharacter", function(data, cb)
     TriggerServerEvent('radium-multicharacter:createCharacter', data)
@@ -76,10 +94,7 @@ local function spawnPreviewPeds(characters)
     end
 end
 
-RegisterNetEvent('radium-multicharacter:openUI', function(characters)
-    spawnPreviewPeds(characters)
-    -- existing openUI logic here
-end)
+
 
 function deletePeds()
     for _, ped in pairs(peds) do

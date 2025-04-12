@@ -1,3 +1,5 @@
+print("[Radium-Core] Loaded Export: multicharacter.lua")
+
 exports('GetCharacters', function(source)
     local identifier = GetPlayerIdentifierByType(source, "license")
     if not identifier then return {} end

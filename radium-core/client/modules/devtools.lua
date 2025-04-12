@@ -1,3 +1,5 @@
+print("[Radium-Core] Loaded Module: devtools.lua")
+
 local showCoords = false
 
 RegisterCommand("showcoords", function()

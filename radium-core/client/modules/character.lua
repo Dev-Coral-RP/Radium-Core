@@ -1,3 +1,5 @@
+print("[Radium-Core] Loaded Module: character.lua")
+
 RegisterNetEvent('radium-core:spawnCharacter', function(data)
     DoScreenFadeOut(500)
     Wait(500)

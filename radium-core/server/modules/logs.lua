@@ -1,3 +1,5 @@
+print("[Radium-Core] Loaded: logs.lua")
+
 RegisterNetEvent('radium-logs:characterCreated', function(src, csn)
     -- Replace this with your actual Discord logging logic
     print(('Character created by [%s] with CSN: %s'):format(src, csn))

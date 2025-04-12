@@ -1,3 +1,5 @@
+print("[Radium-Core] Loaded: csn_utils.lua")
+
 function GenerateCSN()
     local chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'
     local nums = '0123456789'
