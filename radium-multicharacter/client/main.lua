@@ -1,104 +1,109 @@
-print("[Radium-Multicharacter] Client script loaded!")
-local cam = nil
-local peds = {}
+local function generateCSN()
+    local chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'
+    local nums = '0123456789'
+    local result = ''
 
--- NUI unblocker
-CreateThread(function()
-    while true do
-        Wait(500)
-        if not IsNuiFocused() then
-            SetNuiFocus(false, false)
+    for i = 1, 3 do
+        local rand = math.random(#chars)
+        result = result .. chars:sub(rand, rand)
+    end
+    for i = 1, 4 do
+        local rand = math.random(#nums)
+        result = result .. nums:sub(rand, rand)
+    end
+
+    return result
+end
+
+local function generateBlood()
+    local types = { 'A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', 'O+', 'O-' }
+    return types[math.random(1, #types)]
+end
+
+---@param source number
+---@return string?
+local function getIdentifier(source)
+    for _, id in ipairs(GetPlayerIdentifiers(source)) do
+        if id:sub(1, 7) == "license" then
+            return id
         end
     end
+    return nil
+end
+
+lib.callback.register('radium-multicharacter:getCharacters', function(source)
+    local identifier = getIdentifier(source)
+    if not identifier then return {} end
+
+    local result = MySQL.query.await('SELECT * FROM characters WHERE identifier = ?', { identifier })
+    return result or {}
 end)
 
+RegisterServerEvent('radium-multicharacter:createCharacter', function(data)
+    local src = source
+    local identifier = getIdentifier(src)
+    if not identifier then return end
 
+    local existing = MySQL.scalar.await('SELECT COUNT(*) FROM characters WHERE identifier = ?', { identifier })
+    if existing >= Config.MaxSlots then
+        return -- Optionally notify using ox_lib here
+    end
 
-RegisterNetEvent('radium-multicharacter:openUI', function(characters)
-    print("[Radium-Multicharacter] Received UI open event!")
-    print("[Radium-Multicharacter] Characters:", json.encode(characters))
+    local csn = generateCSN()
+    local blood = generateBlood()
 
-    DoScreenFadeOut(0)
-    SetEntityVisible(PlayerPedId(), false)
-
-    -- Spawn preview peds
-    spawnPreviewPeds(characters)
-
-    -- Camera Setup
-    cam = CreateCam("DEFAULT_SCRIPTED_CAMERA", true)
-    SetCamCoord(cam, -1037.72, -2738.36, 22.17)
-    PointCamAtCoord(cam, -1037.72, -2738.36, 20.17)
-    SetCamActive(cam, true)
-    RenderScriptCams(true, true, 1000, true, true)
-
-    ShutdownLoadingScreen()
-    ShutdownLoadingScreenNui()
-    DoScreenFadeIn(1000)
-
-    -- Open UI
-    SetNuiFocus(true, true)
-    SendNUIMessage({
-        action = "openUI",
-        characters = characters
+    MySQL.insert.await('INSERT INTO characters (csn, identifier, slot, name, gender, dob, blood_type) VALUES (?, ?, ?, ?, ?, ?, ?)', {
+        csn,
+        identifier,
+        data.slot,
+        data.name,
+        data.gender,
+        data.dob,
+        blood
     })
+
+    print(('[Radium-MC] Created character (%s) for ID %s'):format(csn, identifier))
 end)
 
+RegisterServerEvent('radium-multicharacter:deleteCharacter', function(slot)
+    local src = source
+    if not Config.AllowCharacterDelete then return end
 
-RegisterNUICallback("createCharacter", function(data, cb)
-    TriggerServerEvent('radium-multicharacter:createCharacter', data)
-    cb(true)
+    local identifier = getIdentifier(src)
+    if not identifier then return end
+
+    MySQL.execute.await('DELETE FROM characters WHERE identifier = ? AND slot = ?', {
+        identifier, slot
+    })
+
+    print(('[Radium-MC] Deleted character in slot %s for ID %s'):format(slot, identifier))
 end)
 
-RegisterNUICallback("deleteCharacter", function(data, cb)
-    TriggerServerEvent('radium-multicharacter:deleteCharacter', data.csn)
-    cb(true)
-end)
+RegisterServerEvent('radium-multicharacter:selectCharacter', function(slot)
+    local src = source
+    local identifier = getIdentifier(src)
+    if not identifier then return end
 
-RegisterNUICallback("selectCharacter", function(data, cb)
-    TriggerServerEvent('radium-multicharacter:loadCharacter', data.csn)
-    cb(true)
-end)
+    local result = MySQL.query.await('SELECT * FROM characters WHERE identifier = ? AND slot = ?', {
+        identifier, slot
+    })
 
-RegisterNetEvent('radium-multicharacter:spawn', function()
-    DoScreenFadeOut(500)
+    local char = result and result[1]
+    if not char then return end
+
+    -- Use ox_lib to spawn after small delay
     Wait(500)
+    TriggerClientEvent('radium-multicharacter:spawnCharacter', src, {
+        name = char.name,
+        dob = char.dob,
+        gender = char.gender,
+        csn = char.csn,
+        job = char.job,
+        job_grade = char.job_grade,
+        bank = char.bank,
+        blood_type = char.blood_type,
+        spawn = Config.SpawnLocation
+    })
 
-    SetEntityVisible(PlayerPedId(), true)
-    DestroyCam(cam, false)
-    RenderScriptCams(false, true, 500, true, true)
-    SetNuiFocus(false, false)
-    SendNUIMessage({ action = "closeUI" })
-
-    DoScreenFadeIn(1000)
+    print(('[Radium-MC] Loaded character %s (Slot %s)'):format(char.name, char.slot))
 end)
-
-
-local previewSpots = {
-    { x = -1037.72, y = -2738.36, z = 20.17, h = 328.68 },
-    { x = -1033.50, y = -2742.12, z = 20.17, h = 328.68 },
-    { x = -1029.38, y = -2745.98, z = 20.17, h = 328.68 }
-}
-
-local function spawnPreviewPeds(characters)
-    for i = 1, Config.MaxSlots do
-        local pedModel = characters[i] and `mp_m_freemode_01` or `a_m_m_bevhills_01`
-        RequestModel(pedModel)
-        while not HasModelLoaded(pedModel) do Wait(0) end
-
-        local spot = previewSpots[i]
-        local ped = CreatePed(4, pedModel, spot.x, spot.y, spot.z - 1.0, spot.h, false, true)
-        FreezeEntityPosition(ped, true)
-        SetEntityInvincible(ped, true)
-        SetBlockingOfNonTemporaryEvents(ped, true)
-        table.insert(peds, ped)
-    end
-end
-
-
-
-function deletePeds()
-    for _, ped in pairs(peds) do
-        DeleteEntity(ped)
-    end
-    peds = {}
-end
