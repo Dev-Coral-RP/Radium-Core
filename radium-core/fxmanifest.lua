@@ -5,6 +5,9 @@ author 'DevCoral'
 description 'Radium-Core Framework'
 version '1.0.0'
 
+shared_script '@ox_lib/init.lua'
+
+
 shared_script 'shared/config.lua'
 
 client_scripts {
@@ -20,5 +23,10 @@ server_scripts {
     'server/modules/logs.lua',
     'exports/*.lua'
 }
+
+-- Optional: just a hint
+dependency 'ox_lib'
+
+
 
 lua54 'yes'

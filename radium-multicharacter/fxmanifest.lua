@@ -9,6 +9,8 @@ author 'YourName'
 
 shared_script '@ox_lib/init.lua'
 
+shared_script 'config.lua'
+
 client_scripts {
     'config.lua',
     'client/main.lua'

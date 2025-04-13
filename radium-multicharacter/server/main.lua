@@ -1,164 +1,109 @@
-local cam
-local previewPeds = {}
-local MaxSlots = Config.MaxSlots or 3
+local function generateCSN()
+    local chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'
+    local nums = '0123456789'
+    local result = ''
 
--- Called on join
-AddEventHandler('onClientResourceStart', function(res)
-    if res ~= GetCurrentResourceName() then return end
-    Wait(1000)
-    TriggerServerEvent('radium-multicharacter:open')
-end)
+    for i = 1, 3 do
+        local rand = math.random(#chars)
+        result = result .. chars:sub(rand, rand)
+    end
+    for i = 1, 4 do
+        local rand = math.random(#nums)
+        result = result .. nums:sub(rand, rand)
+    end
 
-RegisterNetEvent('radium-multicharacter:openMenu', function(characters)
-    setupCamera()
-    spawnPreviewPeds(characters)
+    return result
+end
 
-    local elements = {}
+local function generateBlood()
+    local types = { 'A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', 'O+', 'O-' }
+    return types[math.random(1, #types)]
+end
 
-    for i = 1, MaxSlots do
-        local char = characters[i]
-        if char then
-            elements[#elements+1] = {
-                title = ('%s (Slot %s)'):format(char.name, char.slot),
-                description = char.gender .. ' | ' .. char.dob,
-                icon = 'user',
-                onSelect = function()
-                    lib.confirmDialog({
-                        header = 'Play as this character?',
-                        centered = true,
-                        cancel = true,
-                        labels = { confirm = 'Play', cancel = 'Back' }
-                    }, function(confirm)
-                        if confirm then
-                            deletePreviewPeds()
-                            camReset()
-                            TriggerServerEvent('radium-multicharacter:selectCharacter', char.slot)
-                        end
-                    end)
-                end,
-                metadata = {
-                    { label = 'CSN', value = char.csn },
-                    { label = 'Blood', value = char.blood_type },
-                },
-                arrow = true
-            }
-
-            if Config.AllowCharacterDelete then
-                elements[#elements].onRight = function()
-                    lib.confirmDialog({
-                        header = 'Delete this character?',
-                        centered = true,
-                        cancel = true,
-                        labels = { confirm = 'Delete', cancel = 'Cancel' }
-                    }, function(confirm)
-                        if confirm then
-                            TriggerServerEvent('radium-multicharacter:deleteCharacter', char.slot)
-                            Wait(500)
-                            TriggerServerEvent('radium-multicharacter:open') -- refresh
-                        end
-                    end)
-                end
-            end
-        else
-            elements[#elements+1] = {
-                title = 'Empty Slot #' .. i,
-                icon = 'plus',
-                onSelect = function()
-                    createNewCharacter(i)
-                end
-            }
+---@param source number
+---@return string?
+local function getIdentifier(source)
+    for _, id in ipairs(GetPlayerIdentifiers(source)) do
+        if id:sub(1, 7) == "license" then
+            return id
         end
     end
-
-    lib.registerContext({
-        id = 'radium_multicharacter_menu',
-        title = 'Select a Character',
-        options = elements
-    })
-
-    lib.showContext('radium_multicharacter_menu')
-end)
-
-function createNewCharacter(slot)
-    local input = lib.inputDialog('Create Character', {
-        { type = 'input', label = 'Name', required = true },
-        { type = 'select', label = 'Gender', options = {
-            { label = 'Male', value = 'male' },
-            { label = 'Female', value = 'female' }
-        }, required = true },
-        { type = 'input', label = 'DOB (YYYY-MM-DD)', required = true }
-    })
-
-    if not input then return end
-
-    TriggerServerEvent('radium-multicharacter:createCharacter', {
-        name = input[1],
-        gender = input[2],
-        dob = input[3],
-        slot = slot
-    })
-
-    Wait(1000)
-    TriggerServerEvent('radium-multicharacter:open') -- refresh
+    return nil
 end
 
-RegisterNetEvent('radium-multicharacter:spawnCharacter', function(data)
-    DoScreenFadeOut(500)
+lib.callback.register('radium-multicharacter:getCharacters', function(source)
+    local identifier = getIdentifier(source)
+    if not identifier then return {} end
+
+    local result = MySQL.query.await('SELECT * FROM characters WHERE identifier = ?', { identifier })
+    return result or {}
+end)
+
+RegisterServerEvent('radium-multicharacter:createCharacter', function(data)
+    local src = source
+    local identifier = getIdentifier(src)
+    if not identifier then return end
+
+    local existing = MySQL.scalar.await('SELECT COUNT(*) FROM characters WHERE identifier = ?', { identifier })
+    if existing >= Config.MaxSlots then
+        return -- Optionally notify using ox_lib here
+    end
+
+    local csn = generateCSN()
+    local blood = generateBlood()
+
+    MySQL.insert.await('INSERT INTO characters (csn, identifier, slot, name, gender, dob, blood_type) VALUES (?, ?, ?, ?, ?, ?, ?)', {
+        csn,
+        identifier,
+        data.slot,
+        data.name,
+        data.gender,
+        data.dob,
+        blood
+    })
+
+    print(('[Radium-MC] Created character (%s) for ID %s'):format(csn, identifier))
+end)
+
+RegisterServerEvent('radium-multicharacter:deleteCharacter', function(slot)
+    local src = source
+    if not Config.AllowCharacterDelete then return end
+
+    local identifier = getIdentifier(src)
+    if not identifier then return end
+
+    MySQL.execute.await('DELETE FROM characters WHERE identifier = ? AND slot = ?', {
+        identifier, slot
+    })
+
+    print(('[Radium-MC] Deleted character in slot %s for ID %s'):format(slot, identifier))
+end)
+
+RegisterServerEvent('radium-multicharacter:selectCharacter', function(slot)
+    local src = source
+    local identifier = getIdentifier(src)
+    if not identifier then return end
+
+    local result = MySQL.query.await('SELECT * FROM characters WHERE identifier = ? AND slot = ?', {
+        identifier, slot
+    })
+
+    local char = result and result[1]
+    if not char then return end
+
+    -- Use ox_lib to spawn after small delay
     Wait(500)
-
-    camReset()
-    deletePreviewPeds()
-
-    SetEntityCoordsNoOffset(PlayerPedId(), data.spawn.x, data.spawn.y, data.spawn.z, false, false, false)
-    SetEntityHeading(PlayerPedId(), data.spawn.w)
-    SetEntityVisible(PlayerPedId(), true)
-
-    DoScreenFadeIn(1000)
-
-    -- Welcome notify
-    lib.notify({
-        title = 'Welcome',
-        description = ('%s (%s)'):format(data.name, data.csn),
-        type = 'success'
+    TriggerClientEvent('radium-multicharacter:spawnCharacter', src, {
+        name = char.name,
+        dob = char.dob,
+        gender = char.gender,
+        csn = char.csn,
+        job = char.job,
+        job_grade = char.job_grade,
+        bank = char.bank,
+        blood_type = char.blood_type,
+        spawn = Config.SpawnLocation
     })
+
+    print(('[Radium-MC] Loaded character %s (Slot %s)'):format(char.name, char.slot))
 end)
-
-function setupCamera()
-    if cam then camReset() end
-
-    cam = CreateCam("DEFAULT_SCRIPTED_CAMERA", true)
-    SetCamCoord(cam, Config.Camera.coords.x, Config.Camera.coords.y, Config.Camera.coords.z)
-    PointCamAtCoord(cam, Config.Camera.lookAt.x, Config.Camera.lookAt.y, Config.Camera.lookAt.z)
-    SetCamActive(cam, true)
-    RenderScriptCams(true, true, 1000, true, true)
-end
-
-function camReset()
-    if not cam then return end
-    DestroyCam(cam, false)
-    RenderScriptCams(false, true, 500, true, true)
-    cam = nil
-end
-
-function spawnPreviewPeds(characters)
-    for i = 1, MaxSlots do
-        local spot = vector3(Config.Camera.lookAt.x + (i * 1.5), Config.Camera.lookAt.y, Config.Camera.lookAt.z)
-        local model = characters[i] and `mp_m_freemode_01` or `a_m_m_bevhills_01`
-
-        RequestModel(model)
-        while not HasModelLoaded(model) do Wait(0) end
-
-        local ped = CreatePed(4, model, spot.x, spot.y, spot.z - 1.0, 0.0, false, true)
-        FreezeEntityPosition(ped, true)
-        SetEntityInvincible(ped, true)
-        SetBlockingOfNonTemporaryEvents(ped, true)
-        table.insert(previewPeds, ped)
-    end
-end
-
-function deletePreviewPeds()
-    for _, ped in pairs(previewPeds) do
-        DeleteEntity(ped)
-    end
-    previewPeds = {}
-end
