@@ -107,3 +107,10 @@ RegisterServerEvent('radium-multicharacter:selectCharacter', function(slot)
 
     print(('[Radium-MC] Loaded character %s (Slot %s)'):format(char.name, char.slot))
 end)
+
+RegisterServerEvent('radium-multicharacter:open', function()
+    local src = source
+    local characters = lib.callback.await('radium-multicharacter:getCharacters', src)
+    TriggerClientEvent('radium-multicharacter:openMenu', src, characters)
+end)
+

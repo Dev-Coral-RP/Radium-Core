@@ -12,7 +12,3 @@ AddEventHandler('playerConnecting', function(name, setKickReason, deferrals)
     TriggerEvent('radium-core:playerReady', src)
 end)
 
-RegisterServerEvent('radium-multicharacter:open', function()
-    local src = source
-    TriggerClientEvent('radium-multicharacter:openMenu', src, characters)
-end)

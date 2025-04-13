@@ -3,11 +3,13 @@ local previewPeds = {}
 local MaxSlots = Config.MaxSlots or 3
 
 -- Called on join
-AddEventHandler('onClientResourceStart', function(res)
-    if res ~= GetCurrentResourceName() then return end
-    Wait(1000)
-    TriggerServerEvent('radium-multicharacter:open')
+AddEventHandler('onClientResourceStart', function(resource)
+    if resource == GetCurrentResourceName() then
+        Wait(500)
+        TriggerServerEvent('radium-multicharacter:open')
+    end
 end)
+
 
 RegisterNetEvent('radium-multicharacter:openMenu', function(characters)
     setupCamera()
