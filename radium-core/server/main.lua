@@ -14,6 +14,5 @@ end)
 
 RegisterServerEvent('radium-multicharacter:open', function()
     local src = source
-    local characters = lib.callback.await('radium-multicharacter:getCharacters', src)
     TriggerClientEvent('radium-multicharacter:openMenu', src, characters)
 end)
