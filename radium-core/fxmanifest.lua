@@ -6,7 +6,7 @@ description 'Radium-Core Framework'
 version '1.0.0'
 
 shared_script '@ox_lib/init.lua'
-shared_script 'config.lua'
+shared_script 'shared/config.lua'
 
 client_scripts {
     'client/main.lua',
