@@ -156,63 +156,9 @@ local function openCreateCharacter(slot)
         cid       = slot
     })
     if not newId then return false end
-    spawnDefault()
+    TriggerServerEvent("Radium:CharacterCreated", newId, genderVal)
     return true
 end
-
-local function spawnAtLocation(coords)
-    DoScreenFadeOut(500)
-    while not IsScreenFadedOut() do Wait(0) end
-    exports.spawnmanager:spawnPlayer({
-        x = coords.x,
-        y = coords.y,
-        z = coords.z,
-        heading = coords.w
-    }, function()
-        FreezeEntityPosition(PlayerPedId(), false)
-        SetEntityVisible(PlayerPedId(), true, false)
-        destroyPreviewCam()
-        NetworkEndTutorialSession()
-        DoScreenFadeIn(1000)
-    end)
-end
-
-local function openSpawnSelector()
-    local options = {
-        { title = "Last Location", value = "last" },
-        { title = "LSIA Terminal", value = "lsia" },
-        { title = "Legion Square", value = "legion" }
-    }
-
-    -- Example: Add job-locked location
-    if QBX.PlayerData.job == "police" then
-        table.insert(options, { title = "MRPD", value = "mrpd" })
-    end
-
-    local choice = lib.inputDialog("Choose Spawn Location", {
-        {
-            type = "select",
-            label = "Location",
-            options = options,
-            required = true
-        }
-    })
-
-    if not choice then return end
-
-    local selection = choice[1]
-    if selection == "last" then
-        spawnLastLocation()
-    elseif selection == "lsia" then
-        spawnAtLocation(vector4(-1037.0, -2737.0, 13.8, 330.0))
-    elseif selection == "legion" then
-        spawnAtLocation(vector4(215.8, -810.0, 31.0, 160.0))
-    elseif selection == "mrpd" then
-        spawnAtLocation(vector4(440.84, -983.14, 30.69, 90.0))
-    end
-end
-
-
 
 local function openCharacterSelection()
     local characters, maxSlots = lib.callback.await('radium-core:server:getCharacters', false)

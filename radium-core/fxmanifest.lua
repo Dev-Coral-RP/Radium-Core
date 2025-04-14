@@ -19,6 +19,7 @@ server_scripts {
     'server/modules/multicharacter.lua',
     'server/modules/csn_utils.lua',
     'server/modules/logs.lua',
+    'server/modules/appearance.lua',
     'exports/*.lua'
 }
 
