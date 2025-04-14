@@ -176,14 +176,14 @@ RegisterNetEvent('radium-core:server:deleteCharacter', function(citizenid)
     local owner = MySQL.scalar.await("SELECT license FROM players WHERE citizenid = ?", { citizenid })
     if owner ~= license then return end
     -- Delete from main players table
-    MySQL.execute.await("DELETE FROM players WHERE citizenid = ?", { citizenid })
+    MySQL.query.await("DELETE FROM players WHERE citizenid = ?", { citizenid })
     -- Delete from related tables (if they exist)
     local relatedTables = {
         'player_vehicles', 'player_houses', 'player_outfits', 'player_contacts',
         'player_mails', 'phone_messages', 'phone_invoices', 'crypto_transactions', 'bank_accounts'
     }
     for _, tableName in ipairs(relatedTables) do
-        MySQL.execute.await(string.format("DELETE FROM `%s` WHERE citizenid = ?", tableName), { citizenid })
+        MySQL.query.await(string.format("DELETE FROM `%s` WHERE citizenid = ?", tableName), { citizenid })
     end
     -- (Optional: send a notification to the player about deletion success)
 end)

@@ -7,4 +7,4 @@ Config.DefaultNumberOfCharacters = 3       -- Default number of character slots 
 Config.PlayersNumberOfCharacters = {       -- Optional: custom max characters per specific license
     -- ['license:xxxxxxxxxxxxxxxx'] = 5,
 }
-Config.SpawnLocation = vector4(0.0, 0.0, 0.0, 0.0)  -- Default spawn coords (x, y, z, heading) for new characters
+Config.SpawnLocation = vector4(-1035.71, -2731.87, 13.0, 0.0)  -- Default spawn coords (x, y, z, heading) for new characters
