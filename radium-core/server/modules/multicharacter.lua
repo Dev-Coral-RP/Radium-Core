@@ -149,6 +149,7 @@ lib.callback.register('radium-core:server:createCharacter', function(source, dat
     if playerData then
         -- (If Radium-Core tracks online players, you could add playerData to that list here)
         TriggerClientEvent('radium-core:client:setPlayerData', src, playerData)
+        TriggerClientEvent('Radium:Appearance:OpenPlasticMenu', src) -- Open the appearance menu for the new character
         return playerData.citizenid  -- return the new character's ID
     end
     return nil

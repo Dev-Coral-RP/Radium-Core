@@ -708,5 +708,52 @@ function DrawTxt(text, x, y)
     EndTextCommandDisplayText(x, y)
 end
 
--- Ensure the appearance is applied automatically on character selection/spawn
--- (The server triggers Radium:Appearance:Apply event with appearance data, which we handle above in applyAppearance)
+Radium = Radium or {}
+Radium.PlasticSurgery = Radium.PlasticSurgery or {}
+
+function Radium.PlasticSurgery:Open()
+    destroyPreviewCam()
+
+    local ped = PlayerPedId()
+    local model = IsPedMale(ped) and `mp_m_freemode_01` or `mp_f_freemode_01`
+    RequestModel(model)
+    while not HasModelLoaded(model) do Wait(0) end
+    SetPlayerModel(PlayerId(), model)
+    SetModelAsNoLongerNeeded(model)
+
+    SetEntityCoords(ped, -1035.71, -2731.87, 13.0, false, false, false, true)
+    SetEntityHeading(ped, 0.0)
+    FreezeEntityPosition(ped, true)
+    SetEntityVisible(ped, true, false)
+    DoScreenFadeIn(500)
+
+    local result = lib.inputDialog("Plastic Surgeon", {
+        { type = 'input', label = 'Hair Style', placeholder = 'Enter hair style ID', icon = 'scissors' },
+        { type = 'input', label = 'Beard Style', placeholder = 'Enter beard style ID', icon = 'user' }
+    })
+
+    if not result then return end
+
+    local hair = tonumber(result[1]) or 0
+    local beard = tonumber(result[2]) or 0
+
+    SetPedComponentVariation(ped, 2, hair, 0, 0)
+    SetPedHeadOverlay(ped, 1, beard, 1.0)
+
+    TriggerServerEvent("radium-core:server:saveAppearance", {
+        model = model,
+        hair = hair,
+        beard = beard
+    })
+
+    -- Finish with spawn selector
+    TriggerEvent("radium-core:client:openSpawnSelector")
+end
+
+
+RegisterNetEvent('Radium:Appearance:OpenPlasticMenu', function()
+    Radium.PlasticSurgery:Open()
+end)
+
+
+
