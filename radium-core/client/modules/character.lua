@@ -1,15 +1,15 @@
 print("[Radium-Core] Loaded Module: character.lua")
 
 if Config.useExternalCharacters then
-    return -- Skip internal multicharacter if external system is enabled
+    return
 end
 
-QBX = QBX or {}
-QBX.PlayerData = QBX.PlayerData or {}
+Radium = Radium or {}
+Radium.PlayerData = Radium.PlayerData or {}
 
 RegisterNetEvent('radium-core:client:setPlayerData', function(data)
     if type(data) == 'table' then
-        QBX.PlayerData = data
+        Radium.PlayerData = data
     end
 end)
 
@@ -98,7 +98,7 @@ end
 local function spawnLastLocation()
     DoScreenFadeOut(500)
     while not IsScreenFadedOut() do Wait(0) end
-    local pos = QBX.PlayerData.position or {}
+    local pos = Radium.PlayerData.position or {}
     local spawnCoords
     if pos.x and pos.y and pos.z then
         spawnCoords = vector4(pos.x, pos.y, pos.z, pos.w or 0.0)
@@ -157,6 +157,7 @@ local function openCreateCharacter(slot)
     })
     if not newId then return false end
     TriggerServerEvent("Radium:CharacterCreated", newId, genderVal)
+        exports.ox_lib:showMenu('customization_menu')
     return true
 end
 
@@ -190,7 +191,7 @@ local function openCharacterSelection()
                         onSelect = function()
                             DoScreenFadeOut(10)
                             local ok = lib.callback.await('radium-core:server:loadCharacter', false, char.citizenid)
-                            if ok then spawnLastLocation() else lib.showContext('radium_characters') end
+                            if ok then spawnDefault() else lib.showContext('radium_characters') end
                         end
                     },
                     Config.EnableDeleteCharacter and {

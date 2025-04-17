@@ -1,9 +1,11 @@
 fx_version 'cerulean'
 game 'gta5'
 
+lua54 'yes'
+
 author 'DevCoral'
 description 'Radium-Core Framework'
-version '1.0.0'
+version '0.0.1'
 
 shared_script '@ox_lib/init.lua'
 shared_script 'shared/config.lua'
@@ -23,9 +25,7 @@ server_scripts {
     'exports/*.lua'
 }
 
--- Optional: just a hint
 dependency 'ox_lib'
 
 
 
-lua54 'yes'

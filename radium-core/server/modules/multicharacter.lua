@@ -162,6 +162,7 @@ lib.callback.register('radium-core:server:loadCharacter', function(source, citiz
     if playerData then
         -- (If core maintains a Players list, update it here, e.g. RadiumCore.Players[src] = playerData)
         TriggerClientEvent('radium-core:client:setPlayerData', src, playerData)
+        -- TriggerServerEvent("radium-core:server:loadCharacterAppearance")
         return true
     end
     return false
